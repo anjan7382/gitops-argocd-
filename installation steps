@@ -1,0 +1,65 @@
+What is GitOps?
+GitOps is a DevOps practice where:
+Git is the single source of truth
+Kubernetes manifests (YAML files) are stored in Git
+Any change in Git automatically updates the cluster
+
+What is ArgoCD?
+ArgoCD is a GitOps tool that continuously syncs Kubernetes cluster state with the desired state defined in Git.
+
+argocd components:
+-------------------
+1)API Server (argocd-server): The entry point of ArgoCD. Everything you do —
+                            UI login, CLI command, clicking sync — goes through API Server.
+2)Repository Server (argocd-repo-server): Repository Server = Git Reader + Manifest Generator
+                                        It: Connects to Git
+                                           Pulls the latest code
+                                           Converts Helm/Kustomize into plain Kubernetes YAML
+                                           Sends that desired state to Application Controller
+                                           It does NOT deploy anything.
+3)Application Controller (argocd-application-controller): The ArgoCD Application Controller is the core component responsible for continuously comparing
+                                                        the desired state of applications defined in Git with the live state in the Kubernetes cluster.
+4)What is Drift?
+-------------
+Drift = Difference between:
+Git YAML → says replicas: 3
+Cluster → currently running 1 pod
+ArgoCD detects this mismatch.
+If auto-sync is enabled → it fixes automatically.
+
+Complete Flow in Simple Words
+--------------------------------
+Developer pushes YAML to Git
+Repo Server pulls YAML
+Application Controller compares with cluster
+If mismatch → Sync
+API Server shows status in UI
+Redis improves performance
+
+                                     Step-by-Step Installation (Real-Time Method)
+                                     --------------------------------------------
+Step 1: Create Namespace 
+command: kubectl create namespace argocd
+Step 2: Install ArgoCD
+command: kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+         kubectl get pods -n argocd ( All pods should be Running.)
+ Step 3: Access ArgoCD UI
+ ------------------------
+ Option 1: Port Forward (Local Testing)
+ command: kubectl port-forward svc/argocd-server -n argocd 8080:443
+ https://localhost:8080
+ 
+ Step 4: Get Initial Password
+ command: kubectl get secret argocd-initial-admin-secret -n argocd -o yaml
+ Decode password:
+ command: echo <base64-password> | base64 --decode
+ username : admin password: use that decode password
+
+                           Production Access (LoadBalancer Method)
+                           -----------------------------------------
+command; kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "LoadBalancer"}}'
+       This command modifies the existing Kubernetes Service named argocd-server in the argocd namespace and changes its service type to LoadBalancer, 
+       so it becomes externally accessible.
+       Check external IP:
+       -----------------
+       kubectl get svc -n argocd
