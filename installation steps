@@ -41,7 +41,7 @@ Redis improves performance
 Step 1: Create Namespace 
 command: kubectl create namespace argocd
 Step 2: Install ArgoCD
-command: kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+command: kubectl create -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
          kubectl get pods -n argocd ( All pods should be Running.)
  Step 3: Access ArgoCD UI
  ------------------------
@@ -57,9 +57,80 @@ command: kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/a
 
                            Production Access (LoadBalancer Method)
                            -----------------------------------------
-command; kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "LoadBalancer"}}'
-       This command modifies the existing Kubernetes Service named argocd-server in the argocd namespace and changes its service type to LoadBalancer, 
-       so it becomes externally accessible.
-       Check external IP:
-       -----------------
-       kubectl get svc -n argocd
+when i run   kubectl get svc -n argocd : it will show cluster ip 
+
+NAME                                      TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                      AGE
+argocd-applicationset-controller          ClusterIP   172.20.52.251    <none>        7000/TCP,8080/TCP            3m38s
+argocd-dex-server                         ClusterIP   172.20.68.221    <none>        5556/TCP,5557/TCP,5558/TCP   3m38s
+argocd-metrics                            ClusterIP   172.20.52.254    <none>        8082/TCP                     3m38s
+argocd-notifications-controller-metrics   ClusterIP   172.20.48.126    <none>        9001/TCP                     3m38s
+argocd-redis                              ClusterIP   172.20.139.245   <none>        6379/TCP                     3m38s
+argocd-repo-server                        ClusterIP   172.20.98.190    <none>        8081/TCP,8084/TCP            3m38s
+argocd-server                             ClusterIP   172.20.35.131    <none>        80/TCP,443/TCP               3m38s
+argocd-server-metrics                     ClusterIP   172.20.136.199   <none>        8083/TCP                     3m38s
+
+to change to load balacer run below commands
+----------------------------------------------
+kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "LoadBalancer"}}'
+                         or
+kubectl edit svc argocd-server -n argocd
+Find this line:  type: ClusterIP 
+Change it to: type: LoadBalancer
+Save and exit.
+now check :  kubectl get svc -n argocd  ( change to load balancer or not )
+
+
+ubuntu@ip-172-31-47-11:~/star-agile-insurance-project$ kubectl get svc -n argocd
+NAME                                      TYPE           CLUSTER-IP       EXTERNAL-IP                                                              PORT(S)                      AGE
+argocd-applicationset-controller          ClusterIP      172.20.52.251    <none>                                                                   7000/TCP,8080/TCP            19m
+argocd-dex-server                         ClusterIP      172.20.68.221    <none>                                                                   5556/TCP,5557/TCP,5558/TCP   19m
+argocd-metrics                            ClusterIP      172.20.52.254    <none>                                                                   8082/TCP                     19m
+argocd-notifications-controller-metrics   ClusterIP      172.20.48.126    <none>                                                                   9001/TCP                     19m
+argocd-redis                              ClusterIP      172.20.139.245   <none>                                                                   6379/TCP                     19m
+argocd-repo-server                        ClusterIP      172.20.98.190    <none>                                                                   8081/TCP,8084/TCP            19m
+argocd-server                             LoadBalancer   172.20.35.131    aca9605242a5c4ff18b86cbd117182a9-46841197.ap-south-1.elb.amazonaws.com   80:31071/TCP,443:32683/TCP   19m
+argocd-server-metrics                     ClusterIP      172.20.136.199   <none>                                                                   8083/TCP                     19m
+
+to Acces argocd ui
+--------------------
+ 
+ubuntu@ip-172-31-47-11:~/star-agile-insurance-project$ kubectl get svc -n argocd
+NAME                                      TYPE           CLUSTER-IP       EXTERNAL-IP                                                              PORT(S)                      AGE
+argocd-applicationset-controller          ClusterIP      172.20.52.251    <none>                                                                   7000/TCP,8080/TCP            19m
+argocd-dex-server                         ClusterIP      172.20.68.221    <none>                                                                   5556/TCP,5557/TCP,5558/TCP   19m
+argocd-metrics                            ClusterIP      172.20.52.254    <none>                                                                   8082/TCP                     19m
+argocd-notifications-controller-metrics   ClusterIP      172.20.48.126    <none>                                                                   9001/TCP                     19m
+argocd-redis                              ClusterIP      172.20.139.245   <none>                                                                   6379/TCP                     19m
+argocd-repo-server                        ClusterIP      172.20.98.190    <none>                                                                   8081/TCP,8084/TCP            19m
+argocd-server                             LoadBalancer   172.20.35.131    aca9605242a5c4ff18b86cbd117182a9-46841197.ap-south-1.elb.amazonaws.com   80:31071/TCP,443:32683/TCP   19m
+argocd-server-metrics                     ClusterIP      172.20.136.199   <none>                                                                   8083/TCP                     19m     
+
+to access argocd ui
+----------------------
+https://<external-ip> ( load balacer external ip)
+https://aca9605242a5c4ff18b86cbd117182a9-46841197.ap-south-1.elb.amazonaws.com
+
+to login
+---------
+username; admin
+ Get Initial Password
+ command: kubectl get secret argocd-initial-admin-secret -n argocd -o yaml
+ Decode password:
+ command: echo <base64-password> | base64 --decode
+ username : admin password: use that decode password
+
+AFTER UI IS OPENED 
+-------------------------
+Click NEW APP in ArgoCD UI
+In the ArgoCD dashboard:
++new app
+1)application : any name
+2)Project Name ; default
+3) sync policy : automatic
+SOURCE; github repo url
+Revision : head
+path : . it is yml files location
+DESTINATION:
+cluster url : https://kubernetes.default.svc
+namespace: default
+click: create
